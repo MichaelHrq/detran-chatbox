@@ -22,7 +22,7 @@ CORS(app)  # libera CORS para todas as origens (uso geral)
 
 def gerar_embedding(texto):
     response = openai.embeddings.create(
-        model="text-embedding-3-small",
+        model="gpt-3.5-turbo",
         input=texto
     )
     return response.data[0].embedding
