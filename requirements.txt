@@ -1,0 +1,10 @@
+requests
+beautifulsoup4
+flask
+flask-cors
+openai
+psycopg2-binary
+python-dotenv
+gunicorn
+tqdm
+dotenv
