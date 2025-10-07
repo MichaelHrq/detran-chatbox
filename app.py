@@ -90,6 +90,21 @@ A intenção do cliente é: "{intencao}"
     )
 
     return response.choices[0].message.content.strip()
+
+def gerar_log(pergunta, resposta):
+    try:
+        conn = psycopg2.connect(**SUPABASE_CONFIG)
+        cursor = conn.cursor()
+        sql = """
+        INSERT INTO logs (pergunta, resposta)
+        VALUES (%s, %s);
+        """
+        cursor.execute(sql, (pergunta, resposta))
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        print("Erro ao inserir no banco:", e)
         
 @app.route("/", methods=["GET"])
 def home():
@@ -109,6 +124,7 @@ def chat_sugestoes():
         if not produtos:
             return jsonify({"resposta": "Não consegui encontrar nenhum serviço adequado, desculpe!"})
         resposta = gerar_resposta(pergunta, produtos)
+        gerar_log(pergunta, resposta)
         return jsonify({"resposta": resposta})
     except Exception as e:
         return jsonify({"erro": str(e)}), 500

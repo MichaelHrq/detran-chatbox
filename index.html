@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chatbox IA Detran</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* --- KEY CHANGES: GEMINI-INSPIRED DESIGN SYSTEM --- */
+      :root {
+        --primary-color: #1a73e8;
+        --chat-bg: #ffffff;
+        --widget-bg: #f0f4f9;
+        --user-msg-bg: #d1e3ff;
+        --assistant-msg-bg: #f1f3f4;
+        --input-bg: #f1f3f4;
+        --text-primary: #1f1f1f;
+        --text-secondary: #444746;
+        --border-color: #dee0e3;
+        --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      body {
+        font-family: "Google Sans", sans-serif;
+        background-color: #f8f9fa; /* A light background for contrast */
+      }
+
+      /* --- WIDGET CONTAINER & TOGGLE BUTTON --- */
+      #chat-ia-widget {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 9999;
+      }
+      #chat-ia-toggle {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        cursor: pointer;
+        box-shadow: var(--shadow);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition: transform 0.2s ease;
+      }
+      #chat-ia-toggle:hover {
+        transform: scale(1.05);
+      }
+      #chat-ia-toggle svg {
+        width: 28px;
+        height: 28px;
+      }
+
+      /* --- CHAT BOX --- */
+      #chat-ia-box {
+        display: none; /* Starts hidden */
+        flex-direction: column;
+        position: fixed;
+        bottom: 90px;
+        right: 20px;
+        width: 370px;
+        height: 500px;
+        background: var(--chat-bg);
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        transition: opacity 0.3s, transform 0.3s;
+        transform-origin: bottom right;
+      }
+       /* Animation for opening */
+      #chat-ia-box.open {
+        display: flex;
+        animation: slideUp 0.3s ease-out forwards;
+      }
+      @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+      }
+
+      /* --- HEADER --- */
+      #chat-ia-header {
+        background: var(--widget-bg);
+        color: var(--text-primary);
+        padding: 16px;
+        font-weight: 500;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border-color);
+      }
+      #chat-ia-close {
+        cursor: pointer;
+        fill: var(--text-secondary);
+        width: 24px;
+        height: 24px;
+        padding: 4px;
+        border-radius: 50%;
+        transition: background-color 0.2s;
+      }
+       #chat-ia-close:hover {
+        background-color: #e0e0e0;
+       }
+
+
+      /* --- MESSAGES AREA --- */
+      #chat-ia-mensagens {
+        flex: 1;
+        padding: 16px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        background-color: var(--chat-bg);
+      }
+      /* Custom scrollbar */
+      #chat-ia-mensagens::-webkit-scrollbar {
+        width: 6px;
+      }
+      #chat-ia-mensagens::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 3px;
+      }
+
+      /* --- MESSAGE BUBBLES --- */
+      .messaggio {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        max-width: 90%;
+        line-height: 1.5;
+        word-wrap: break-word;
+      }
+      .message-content {
+          padding: 10px 16px;
+          border-radius: 18px;
+          font-size: 15px;
+      }
+      .assistente {
+        align-self: flex-start;
+      }
+      .assistente .message-content {
+        background-color: var(--assistant-msg-bg);
+        color: var(--text-primary);
+        border-bottom-left-radius: 4px;
+      }
+      .utente {
+        align-self: flex-end;
+      }
+      .utente .message-content {
+        background-color: var(--user-msg-bg);
+        color: var(--text-primary);
+        border-bottom-right-radius: 4px;
+      }
+
+      /* Added an avatar for the assistant for better UI */
+      .avatar {
+          width: 28px;
+          height: 28px;
+          background-color: var(--primary-color);
+          border-radius: 50%;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          flex-shrink: 0;
+          margin-top: 5px;
+      }
+       .avatar svg {
+        width: 18px;
+        height: 18px;
+        fill: white;
+       }
+
+
+      /* --- REDESIGNED INPUT AREA (KEY CHANGE) --- */
+      #chat-ia-input {
+        display: flex;
+        align-items: flex-end;
+        padding: 12px 16px;
+        border-top: 1px solid var(--border-color);
+        background-color: var(--widget-bg);
+        gap: 10px;
+      }
+      #chat-ia-texto {
+        flex: 1;
+        border: none;
+        outline: none;
+        resize: none;
+        background: var(--input-bg);
+        padding: 12px 16px;
+        border-radius: 24px;
+        font-size: 15px;
+        font-family: "Google Sans", sans-serif;
+        line-height: 1.4;
+        max-height: 100px; /* Limit expansion */
+        overflow-y: auto;
+      }
+      #chat-ia-send-btn {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 44px;
+        height: 44px;
+        cursor: pointer;
+        font-size: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-shrink: 0;
+        transition: background-color 0.2s, opacity 0.2s;
+      }
+      /* Disabled state for the button */
+      #chat-ia-send-btn:disabled {
+        background-color: #a0c3f0;
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
+
+      /* --- MOBILE RESPONSIVENESS --- */
+      @media (max-width: 480px) {
+        #chat-ia-box {
+          bottom: 0;
+          right: 0;
+          left: 0;
+          top: 0;
+          width: 100%;
+          max-height: 100%;
+          border-radius: 0;
+        }
+        #chat-ia-widget {
+          bottom: 15px;
+          right: 15px;
+        }
+        #chat-ia-toggle {
+          width: 50px;
+          height: 50px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="chat-ia-widget">
+      <button id="chat-ia-toggle">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 48 48"
+        >
+          <path
+            fill="currentColor"
+            fill-rule="evenodd"
+            d="M29.032 15.093C28.178 14.682 27.181 14.33 26 14c1.18-.331 2.178-.682 3.032-1.093c1.822-.876 2.988-2.03 3.875-3.864C33.319 8.189 33.67 7.189 34 6c.33 1.189.68 2.19 1.093 3.043c.887 1.835 2.053 2.988 3.875 3.864c.853.411 1.851.762 3.032 1.093c-1.18.331-2.178.682-3.032 1.093c-1.822.877-2.988 2.03-3.875 3.864c-.412.854-.764 1.854-1.093 3.043c-.33-1.189-.68-2.19-1.093-3.043c-.887-1.835-2.053-2.988-3.875-3.864m3.69.146A9.5 9.5 0 0 0 31.173 14a9.5 9.5 0 0 0 1.55-1.24A9.5 9.5 0 0 0 34 11.18a9.4 9.4 0 0 0 1.278 1.582c.474.47.99.878 1.549 1.239a9.5 9.5 0 0 0-1.55 1.24A9.5 9.5 0 0 0 34 16.82a9.5 9.5 0 0 0-1.278-1.582M9.304 29.064A41 41 0 0 0 6 28a41 41 0 0 0 3.304-1.064c5.083-1.906 7.707-4.477 9.632-9.612A40 40 0 0 0 20 14a40 40 0 0 0 1.064 3.324c1.925 5.135 4.55 7.706 9.632 9.612c1.002.376 2.098.726 3.304 1.064a41 41 0 0 0-3.304 1.064c-5.083 1.906-7.707 4.477-9.632 9.612A40 40 0 0 0 20 42a40 40 0 0 0-1.064-3.324c-1.925-5.135-4.55-7.706-9.632-9.612m7.403 2.17c-1.343-1.334-2.916-2.37-4.765-3.234c1.849-.864 3.422-1.9 4.765-3.233c1.355-1.345 2.412-2.93 3.293-4.808c.88 1.878 1.938 3.463 3.293 4.808c1.343 1.333 2.916 2.369 4.765 3.233c-1.849.864-3.422-1.9-4.765 3.233c-1.355 1.345-2.412 2.93-3.293 4.808c-.88-1.878-1.938-3.463-3.293-4.807"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </button>
+
+      <div id="chat-ia-box">
+        <div id="chat-ia-header">
+          <div id="chat-ia-header-title"></div>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="-6 -6 24 24"
+            id="chat-ia-close"
+          >
+            <path
+              d="m7.314 5.9l3.535-3.536A1 1 0 1 0 9.435.95L5.899 4.485L2.364.95A1 1 0 1 0 .95 2.364l3.535 3.535L.95 9.435a1 1 0 1 0 1.414 1.414l3.535-3.535l3.536 3.535a1 1 0 1 0 1.414-1.414L7.314 5.899z"
+            />
+          </svg>
+        </div>
+        <div id="chat-ia-mensagens"></div>
+        <div id="chat-ia-input">
+          <textarea id="chat-ia-texto" rows="1"></textarea>
+          <button id="chat-ia-send-btn">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // --- DOM ELEMENTS ---
+        const toggle = document.getElementById("chat-ia-toggle");
+        const close = document.getElementById("chat-ia-close");
+        const chatBox = document.getElementById("chat-ia-box");
+        const chatHeader = document.getElementById("chat-ia-header-title");
+        const mensagens = document.getElementById("chat-ia-mensagens");
+        const textarea = document.getElementById("chat-ia-texto");
+        const sendButton = document.getElementById("chat-ia-send-btn");
+
+        // --- API & TRANSLATIONS ---
+        const api = `https://detran-chatbox-production.up.railway.app/chatbox`;
+        const traducoes = {
+            "pt-br": {
+                header: "Assistente Virtual",
+                placeholder: "Digite sua mensagem...",
+                welcome: "Olá! Como posso ajudar você hoje?",
+                loading: "Pensando...",
+                no_response: "Desculpe, não consegui encontrar uma resposta.",
+                error: "Ocorreu um erro: ",
+            },
+        };
+        const T = traducoes["pt-br"];
+
+        // --- CORE CHAT FUNCTIONS ---
+        function inicializarChat() {
+          chatHeader.textContent = T.header;
+          textarea.placeholder = T.placeholder;
+          mensagens.innerHTML = "";
+          adicionarMensagem("assistente", T.welcome);
+          sendButton.disabled = true; // Button starts disabled
+        }
+
+        async function enviarMensagemIA() {
+          const mensagem = textarea.value.trim();
+          if (!mensagem) return;
+          adicionarMensagem("utente", mensagem);
+          textarea.value = "";
+          textarea.style.height = "auto"; // Reset height after sending
+          sendButton.disabled = true;
+          textarea.focus();
+          const divCarregando = adicionarMensagem("assistente", T.loading);
+          try {
+            const resposta = await fetch(api, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ mensagem }),
+            });
+            if (!resposta.ok) {
+                throw new Error(`HTTP error! status: ${resposta.status}`);
+            }
+            const data = await resposta.json();
+             // Simulate typing delay for a more natural feel
+            setTimeout(() => {
+              const respostaFormatada = formatarRespostaIA(
+                data.resposta || T.no_response
+              );
+              divCarregando.querySelector(".message-content").innerHTML = respostaFormatada;
+              scrollParaFim();
+            }, 500);
+          } catch (erro) {
+            divCarregando.querySelector(".message-content").innerHTML = T.error + erro.message;
+            scrollParaFim();
+          }
+        }
+
+        // --- HELPER FUNCTIONS ---
+        function adicionarMensagem(origem, texto) {
+            const div = document.createElement("div");
+            div.classList.add("messaggio", origem);
+
+            // KEY CHANGE: Added a more structured message format with an avatar
+            let innerHTML = '';
+            if (origem === 'assistente') {
+                innerHTML += `
+                    <div class="avatar">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2.5a.75.75 0 0 1 .75.75v5.5a.75.75 0 0 1-1.5 0V3.25A.75.75 0 0 1 12 2.5Zm0 13a.75.75 0 0 1 .75.75v5.5a.75.75 0 0 1-1.5 0v-5.5a.75.75 0 0 1 .75-.75ZM5.11 6.22a.75.75 0 0 1 1.06-1.06l3.89 3.89a.75.75 0 1 1-1.06 1.06L5.1 6.22ZM13.94 14.99a.75.75 0 0 1 1.06-1.06l3.89 3.89a.75.75 0 0 1-1.06 1.06l-3.89-3.89ZM2.5 12a.75.75 0 0 1 .75-.75h5.5a.75.75 0 0 1 0 1.5H3.25a.75.75 0 0 1-.75-.75Zm13 0a.75.75 0 0 1 .75-.75h5.5a.75.75 0 0 1 0 1.5h-5.5a.75.75 0 0 1-.75-.75ZM5.1 17.78a.75.75 0 0 1 .001-1.06l3.89-3.89a.75.75 0 0 1 1.06 1.06l-3.89 3.89a.75.75 0 0 1-1.06 0Zm9.9-9.9a.75.75 0 0 1 0-1.06l3.89-3.89a.75.75 0 1 1 1.06 1.06l-3.89 3.89a.75.75 0 0 1-1.06 0Z"></path></svg>
+                    </div>`;
+            }
+            innerHTML += `<div class="message-content">${texto}</div>`;
+            div.innerHTML = innerHTML;
+
+            mensagens.appendChild(div);
+            scrollParaFim();
+            return div;
+        }
+
+        function formatarRespostaIA(texto) {
+          if (!texto) return "";
+          let textoFormatado = texto
+            .replace(
+              /\[(.*?)\]\((.*?)\)/g,
+              '<a href="$2" target="_blank" style="color: var(--primary-color); text-decoration: underline;">$1</a>'
+            )
+            .replace(/\n/g, "<br>");
+          return textoFormatado;
+        }
+
+        function scrollParaFim() {
+          mensagens.scrollTop = mensagens.scrollHeight;
+        }
+
+        // --- EVENT LISTENERS ---
+        toggle.onclick = () => {
+          const isOpen = chatBox.classList.contains("open");
+          if (isOpen) {
+             chatBox.classList.remove("open");
+          } else {
+             chatBox.classList.add("open");
+             textarea.focus();
+          }
+        };
+
+        close.onclick = () => {
+          chatBox.classList.remove("open");
+        };
+
+        sendButton.onclick = enviarMensagemIA;
+
+        textarea.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            enviarMensagemIA();
+          }
+        });
+
+        // KEY CHANGE: Auto-resize textarea and manage send button state
+        textarea.addEventListener("input", () => {
+          textarea.style.height = "auto";
+          textarea.style.height = `${textarea.scrollHeight}px`;
+          sendButton.disabled = textarea.value.trim().length === 0;
+        });
+
+        // --- INITIALIZATION ---
+        inicializarChat();
+      });
+    </script>
+  </body>
+</html>
